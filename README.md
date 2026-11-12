@@ -17,5 +17,5 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    must be expo dev to have acess to native android system
    npx expo prebuild --platform android
    press "a" to selec android
-   caso de um problema para carregar o programa utilize o link Web ex"http://localhost:8081"
+   caso de um problema para carregar o programa utilize o link Web ex"http://localhost:8081" isso ocorre por interferencia do firewall
    ```
