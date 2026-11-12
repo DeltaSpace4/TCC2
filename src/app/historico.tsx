@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { getSmsLinkReports, type SmsLinkReport } from "../services/SMS";
+import { Platform, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { getSmsLinkReports, syncIncomingSmsWithLinks, type SmsLinkReport } from "../services/SMS";
 import { getShortIncomingCalls, type ShortIncomingCall } from "../services/SPAM";
 import { globalStyles } from "../styles/global";
 
@@ -19,15 +19,18 @@ export default function Historico() {
     } catch (error) {
       console.error("Erro ao carregar chamadas para o histórico:", error);
       setHasError(true);
-    } finally {
-      setIsLoading(false);
     }
 
     try {
+      if (Platform.OS === "android") {
+        await syncIncomingSmsWithLinks();
+      }
       setSmsReports(await getSmsLinkReports());
     } catch (error) {
       console.error("Erro ao carregar relatórios de SMS para o histórico:", error);
       setHasError(true);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -45,6 +48,23 @@ export default function Historico() {
         if (isActive) {
           setHasError(true);
         }
+      }
+    };
+
+    const loadInitialSmsReports = async () => {
+      try {
+        if (Platform.OS === "android") {
+          await syncIncomingSmsWithLinks();
+        }
+        const loadedSmsReports = await getSmsLinkReports();
+        if (isActive) {
+          setSmsReports(loadedSmsReports);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar relatórios de SMS para o histórico:", error);
+        if (isActive) {
+          setHasError(true);
+        }
       } finally {
         if (isActive) {
           setIsLoading(false);
@@ -53,6 +73,7 @@ export default function Historico() {
     };
 
     void loadInitialCalls();
+    void loadInitialSmsReports();
     return () => {
       isActive = false;
     };
@@ -79,7 +100,7 @@ export default function Historico() {
             <Text selectable style={globalStyles.report}>
               {calls.map((call, index) => (
                 <Text key={index}>
-                  {index + 1}. {call.phoneNumber} - {call.durationSeconds} segundos
+                  {index + 1}. {call.phoneNumber} - {call.durationSeconds} segundos - {new Date(call.callTimestamp).toLocaleString()}
                   {"\n"}
                 </Text>
               ))}
@@ -90,7 +111,7 @@ export default function Historico() {
             <Text selectable style={globalStyles.report}>
               {smsReports.map((report, index) => (
                 <Text key={index}>
-                  {index + 1}. {report.sender|| "Desconhecido"}
+                  {index + 1}. {report.sender|| "Desconhecido"} - {report.links.join(", ")}
                   {"\n"}
                 </Text>
               ))}

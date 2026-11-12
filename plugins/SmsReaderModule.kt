@@ -29,6 +29,21 @@ class SmsReaderModule(context: ReactApplicationContext) :
   override fun getName() = "SmsReader"
 
   @ReactMethod
+  fun getPersistedBlockedNumbers(userId: String, promise: Promise) {
+    try {
+      val numbers = reactApplicationContext
+        .getSharedPreferences("call_screening", Context.MODE_PRIVATE)
+        .getStringSet("blocked_numbers_$userId", emptySet())
+        .orEmpty()
+      val result = Arguments.createArray()
+      numbers.sorted().forEach(result::pushString)
+      promise.resolve(result)
+    } catch (error: Exception) {
+      promise.reject("BLOCKED_NUMBERS_READ_FAILED", "Não foi possível ler a lista de bloqueio local.", error)
+    }
+  }
+
+  @ReactMethod
   fun updateBlockedNumbers(userId: String, numbers: ReadableArray, promise: Promise) {
     try {
       val blockedNumbers = buildSet {

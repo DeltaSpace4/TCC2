@@ -46,6 +46,14 @@ export const globalStyles = StyleSheet.create({
     width: "30%",
     alignItems: "center",
   },
+  buttonLink:{
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: colors.primary,
+    width: "100%",
+    alignItems: "center",
+    textAlign: "center",
+  },
   buttonText: {
     color: colors.text,
     fontWeight: 'bold',

@@ -1,14 +1,15 @@
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { AppState, Linking, PermissionsAndroid, Platform, Text, TouchableOpacity, View } from "react-native";
+import { auth } from "../../FirebaseConfig";
 import { syncIncomingSmsWithLinks } from "../services/SMS";
-import { requestCallScreeningRole, syncShortIncomingCalls } from "../services/SPAM";
+import { requestCallScreeningRole, syncShortCallsToFirebase, syncShortIncomingCalls } from "../services/SPAM";
 import { globalStyles } from "../styles/global";
 
 export default function Home() {
   const [callSyncStatus, setCallSyncStatus] = useState("Solicitando acesso às chamadas...");
+  const [firebaseCallSyncStatus, setFirebaseCallSyncStatus] = useState("");
   const [smsSyncStatus, setSmsSyncStatus] = useState("Solicitando acesso às mensagens...");
-  const [blockedNumberCount, setBlockedNumberCount] = useState(0);
   const [callScreeningRoleGranted, setCallScreeningRoleGranted] = useState(false);
   const [isRequestingCallScreeningRole, setIsRequestingCallScreeningRole] = useState(false);
   const [callPermissionBlocked, setCallPermissionBlocked] = useState(false);
@@ -33,7 +34,6 @@ export default function Home() {
 
       try {
         const result = await syncShortIncomingCalls();
-        setBlockedNumberCount(result.blockedNumbersCount);
         setCallScreeningRoleGranted(result.callScreeningRoleGranted);
         setCallPermissionBlocked(
           result.permissionStatus === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN,
@@ -44,13 +44,13 @@ export default function Home() {
               ? "Acesso às chamadas bloqueado. Ative a permissão nas configurações do Android."
               : "Acesso às chamadas não permitido. Toque para tentar novamente.",
           );
-        } else if (result.savedCount > 0) {
+        } else if (result.shortCallsInWindowCount > 0) {
           setCallSyncStatus(
-            `${result.savedCount} chamada(s) de curta(s) duração salva(s) no Firebase.`,
+            `${result.shortCallsInWindowCount} ligação(ões) suspeita(s) de SPAM encontrada(s).`,
           );
         } else {
           setCallSyncStatus(
-            "Monitoramento ativo. Nenhuma chamada de curta duração recebida encontrada.",
+            "Nenhuma ligação suspeita de SPAM encontrada.",
           );
         }
       } catch (error) {
@@ -60,6 +60,19 @@ export default function Home() {
         );
       } finally {
         isSyncing.current = false;
+        if (auth.currentUser) {
+          setFirebaseCallSyncStatus("Sincronizando histórico com o Firebase...");
+          void syncShortCallsToFirebase()
+            .then(() => {
+              setFirebaseCallSyncStatus("");
+            })
+            .catch((error: unknown) => {
+              console.error("Erro ao sincronizar histórico com o Firebase:", error);
+              setFirebaseCallSyncStatus(
+                "Erro ao sincronizar histórico com o Firebase.",
+              );
+            });
+        }
       }
     };
 
@@ -89,7 +102,7 @@ export default function Home() {
           );
         } else if (result.savedCount > 0) {
           setSmsSyncStatus(
-            `${result.savedCount} mensagem(ns) com links incluída(s) na denúncia.`,
+            `${result.savedCount} mensagem(ns) nova(s) com links foram encontrada(s).`,
           );
         } else {
           setSmsSyncStatus(
@@ -132,12 +145,10 @@ export default function Home() {
     <View style={globalStyles.container}>
       <Text style={globalStyles.title}>Home</Text>
       <Text style={globalStyles.empty}>{callSyncStatus}</Text>
+      {firebaseCallSyncStatus ? (
+        <Text style={globalStyles.empty}>{firebaseCallSyncStatus}</Text>
+      ) : null}
       <Text style={globalStyles.empty}>{smsSyncStatus}</Text>
-          <Text style={globalStyles.empty}>
-            {callScreeningRoleGranted
-              ? `Bloqueio ativo para ${blockedNumberCount} número(s) com 5 ou mais ocorrências.`
-              : `${blockedNumberCount} número(s) atingiram 5 ocorrências e aguardam ativação do bloqueio.`}
-          </Text>
           {!callScreeningRoleGranted ? (
             <TouchableOpacity
               accessibilityRole="button"
@@ -151,6 +162,8 @@ export default function Home() {
                       setCallSyncStatus(
                         "O Android não ativou o bloqueio de chamadas.",
                       );
+                    } else {
+                      retryPermissionRequests.current?.();
                     }
                   })
                   .catch((error: unknown) => {

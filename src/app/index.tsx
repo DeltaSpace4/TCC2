@@ -47,6 +47,9 @@ export default function Login() {
       <TouchableOpacity style={styles.Cadastro} onPress={() => router.push("/cadastro")}>
         <Text style={globalStyles.buttonText}>Cadastrar</Text>
       </TouchableOpacity>
+      <TouchableOpacity style={styles.Cadastro} onPress={() => router.push("/block")}>
+        <Text style={globalStyles.buttonText}>Gerenciar Bloqueios</Text>
+      </TouchableOpacity>
     </View>
   );
 };

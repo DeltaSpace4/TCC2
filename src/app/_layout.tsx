@@ -8,5 +8,6 @@ export default function RootLayout() {
     <Stack.Screen name="denuncia" />
     <Stack.Screen name="historico" />
     <Stack.Screen name="conta" />
+    <Stack.Screen name="block" />
   </Stack>
 }

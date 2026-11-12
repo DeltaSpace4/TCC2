@@ -1,11 +1,6 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
-const {
-  withAndroidManifest,
-  withAppBuildGradle,
-  withDangerousMod,
-  withMainApplication,
-} = require("@expo/config-plugins");
+const { withAndroidManifest, withAppBuildGradle, withDangerousMod, withMainApplication } = require("@expo/config-plugins");
 
 function withSmsReader(config) {
   config = withAndroidManifest(config, (config) => {

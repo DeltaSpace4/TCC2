@@ -18,7 +18,12 @@ class SpamCallScreeningService : CallScreeningService() {
     val shouldBlock =
       isIncoming &&
         !callerNumber.isNullOrEmpty() &&
-        blockedNumbers.contains(callerNumber)
+        blockedNumbers.any { blockedNumber ->
+          callerNumber == blockedNumber ||
+            (minOf(callerNumber.length, blockedNumber.length) >= 8 &&
+              (callerNumber.endsWith(blockedNumber) ||
+                blockedNumber.endsWith(callerNumber)))
+        }
 
     val response = CallResponse.Builder()
       .setDisallowCall(shouldBlock)
